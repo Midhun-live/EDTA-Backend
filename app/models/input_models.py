@@ -9,24 +9,23 @@ from datetime import date
 from pydantic import BaseModel
 from typing import Optional
 
+class SpO2Category(str, Enum):
+    NORMAL = ">=94"
+    BORDERLINE = "88-94"
+    LOW = "<88"
 
 class RespiratoryInput(BaseModel):
-    # Core oxygenation
-    spo2: int
+    spo2_category: SpO2Category
     on_oxygen: bool
     oxygen_flow_lpm: Optional[float] = None
 
-    # Non-invasive ventilation
     on_niv: bool = False
     ipap: Optional[int] = None
     epap: Optional[int] = None
     peep: Optional[int] = None
 
-    # Airway
     tracheostomy: bool = False
     requires_suctioning: bool = False
-
-
 
 
 class MobilityStatus(str, Enum):
@@ -41,8 +40,8 @@ class MobilityInput(BaseModel):
 
 
 class PressureInjuryInput(BaseModel):
-    has_pressure_sore: Optional[bool] = None
-    prolonged_bed_rest: Optional[bool] = None
+    has_pressure_sore: bool
+    prolonged_bed_rest: bool
     
 class FeedingMethod(str, Enum):
     ORAL = "Oral"
@@ -91,8 +90,3 @@ class AssessmentInput(BaseModel):
     elimination: EliminationInput
     wound_care: WoundCareInput
     home_environment: HomeEnvironmentInput
-
-class CreateAssessmentRequest(BaseModel):
-    patient_name: str
-    assessment_input: AssessmentInput
-

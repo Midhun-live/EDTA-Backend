@@ -1,37 +1,15 @@
-from typing import Dict, List
-from app.models.input_models import (
-    HomeEnvironmentInput,
-    MobilityInput,
-    MobilityStatus,
-    HomeLayout
-)
+from app.models.input_models import HomeEnvironmentInput, MobilityInput
 
 
-def evaluate_home_environment_needs(
-    home: HomeEnvironmentInput,
-    mobility: MobilityInput
-) -> Dict:
-    """
-    Evaluate home safety based on layout and mobility.
-    """
-
-    advice: List[str] = []
-
-    poor_mobility = mobility.status in (
-        MobilityStatus.BEDRIDDEN,
-        MobilityStatus.WHEELCHAIR_BOUND
-    )
+def evaluate_home_environment_needs(home: HomeEnvironmentInput, mobility: MobilityInput):
+    advice = []
 
     if (
-        home.layout == HomeLayout.MULTI_FLOOR
+        home.layout == "Multi-floor"
         and not home.lift_available
-        and poor_mobility
+        and mobility.status != "Independent"
     ):
-        advice.extend([
-            "Ground-floor living arrangement is advised.",
-            "Avoid stair use to reduce fall risk."
-        ])
+        advice.append("Ground floor setup advised")
+        advice.append("Avoid stair use")
 
-    return {
-        "care_advice": advice
-    }
+    return advice

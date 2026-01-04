@@ -1,44 +1,23 @@
-from typing import List, Dict
-from app.models.input_models import MobilityInput, MobilityStatus
+from app.models.input_models import MobilityInput
 
 
-def evaluate_mobility_needs(mobility: MobilityInput) -> List[Dict]:
-    recommendations = []
+def evaluate_mobility_needs(mobility: MobilityInput):
+    equipment = []
 
-    if mobility.status == MobilityStatus.BEDRIDDEN:
-        recommendations.extend([
-            {
-                "equipment": "Hospital Bed (Semi-Fowler)",
-                "category": "Essential"
-            },
-            {
-                "equipment": "Air Mattress",
-                "category": "Essential"
-            },
-            {
-                "equipment": "Bedside Commode",
-                "category": "Essential"
-            }
+    if mobility.status == "Bedridden":
+        equipment.extend([
+            "Hospital bed (semi-fowler)",
+            "Air mattress",
+            "Bedside commode"
         ])
 
-    elif mobility.status == MobilityStatus.WHEELCHAIR_BOUND:
-        recommendations.extend([
-            {
-                "equipment": "Wheelchair",
-                "category": "Essential"
-            },
-            {
-                "equipment": "Bedside Commode",
-                "category": "Essential"
-            }
+    elif mobility.status == "Wheelchair-bound":
+        equipment.extend([
+            "Wheelchair",
+            "Bedside commode"
         ])
 
-    elif mobility.status == MobilityStatus.WALKS_WITH_ASSISTANCE:
-        recommendations.append({
-            "equipment": "Walker / Walking Stick",
-            "category": "Recommended"
-        })
+    elif mobility.status == "Walks with assistance":
+        equipment.append("Walker / walking stick")
 
-    # Independent → no equipment
-
-    return recommendations
+    return equipment

@@ -1,35 +1,29 @@
-
-from typing import List, Dict
 from app.models.input_models import RespiratoryInput
 
 
-def evaluate_respiratory_needs(respiratory: RespiratoryInput) -> List[Dict]:
-    """
-    Evaluate respiratory status and return equipment recommendations.
-    """
+def evaluate_respiratory_needs(resp: RespiratoryInput):
+    equipment = []
 
-    recommendations = []
+    # Oxygen logic (EDTA)
+    if resp.on_oxygen or resp.spo2_category == "<88":
+        equipment.append("Oxygen concentrator (5L)")
+        equipment.append("Nasal cannula")
 
-    # If oxygen is needed
-    if respiratory.on_oxygen or (
-        respiratory.spo2 is not None and respiratory.spo2 < 88
-    ):
-        recommendations.append({
-            "equipment": "Oxygen Concentrator",
-            "category": "Essential"
-        })
+        if resp.oxygen_flow_lpm is not None and resp.oxygen_flow_lpm > 5:
+            equipment.append("Oxygen cylinders")
 
-        # High flow oxygen → add cylinder
-        if respiratory.oxygen_flow_lpm is not None and respiratory.oxygen_flow_lpm >= 5:
-            recommendations.append({
-                "equipment": "Oxygen Cylinder",
-                "category": "Essential"
-            })
+    # NIV
+    if resp.on_niv:
+        equipment.append(
+            f"NIV with IPAP {resp.ipap}, EPAP {resp.epap}, PEEP {resp.peep}"
+        )
 
-        # Delivery interface
-        recommendations.append({
-            "equipment": "Nasal Cannula",
-            "category": "Essential"
-        })
+    # Tracheostomy
+    if resp.tracheostomy:
+        equipment.append("Tracheostomy care bundle")
 
-    return recommendations
+    # Suction
+    if resp.requires_suctioning:
+        equipment.append("Mobile suction apparatus")
+
+    return equipment
