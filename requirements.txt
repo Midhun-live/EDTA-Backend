@@ -1,0 +1,16 @@
+fastapi==0.110.0
+uvicorn==0.29.0
+
+# Database
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+
+# Auth & security
+passlib==1.7.4
+pyjwt==2.8.0
+
+# Validation & parsing
+pydantic==2.6.1
+
+# Environment variables (optional but recommended)
+python-dotenv==1.0.1
