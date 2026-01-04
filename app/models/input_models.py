@@ -5,6 +5,13 @@ from typing import Optional
 from enum import Enum
 
 
+class PatientInfo(BaseModel):
+    name: str
+    age: int
+    phone: str
+    address: str
+
+
 class RespiratoryInput(BaseModel):
     spo2: Optional[int] = None
     on_oxygen: Optional[bool] = None
@@ -62,6 +69,7 @@ class HomeEnvironmentInput(BaseModel):
     lift_available: bool
 
 class AssessmentInput(BaseModel):
+    patient: PatientInfo
     respiratory: RespiratoryInput
     mobility: MobilityInput
     pressure_injury: PressureInjuryInput
@@ -70,4 +78,8 @@ class AssessmentInput(BaseModel):
     elimination: EliminationInput
     wound_care: WoundCareInput
     home_environment: HomeEnvironmentInput
+
+class CreateAssessmentRequest(BaseModel):
+    patient_name: str
+    assessment_input: AssessmentInput
 

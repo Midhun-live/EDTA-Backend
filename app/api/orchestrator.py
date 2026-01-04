@@ -10,40 +10,35 @@ from app.services.elimination import evaluate_elimination_needs
 from app.services.wound_care import evaluate_wound_care_needs
 from app.services.home_environment import evaluate_home_environment_needs
 
-
-def generate_discharge_report(assessment: AssessmentInput) -> dict:
+def generate_discharge_report(assessment):
     recommendations = []
     care_instructions = []
 
-    # Respiratory
     if assessment.respiratory:
         recommendations.extend(
             evaluate_respiratory_needs(assessment.respiratory)
         )
 
-    # Mobility
     if assessment.mobility:
         recommendations.extend(
             evaluate_mobility_needs(assessment.mobility)
         )
 
-    # Pressure Injury
     if assessment.pressure_injury:
-        pressure_result = evaluate_pressure_injury_needs(assessment.pressure_injury)
-        recommendations.extend(pressure_result["equipment"])
-        care_instructions.extend(pressure_result["care_instructions"])
+        result = evaluate_pressure_injury_needs(assessment.pressure_injury)
+        recommendations.extend(result.get("equipment", []))
+        care_instructions.extend(result.get("care_instructions", []))
 
-    #Feeding and Swallowing
     if assessment.feeding:
         recommendations.extend(
             evaluate_feeding_needs(assessment.feeding)
         )
-    
+
     if assessment.cognitive:
-        cognitive_result = evaluate_cognitive_supervision_needs(assessment.cognitive)
-        recommendations.extend(cognitive_result["equipment"])
-        care_instructions.extend(cognitive_result["care_advice"])
-    
+        result = evaluate_cognitive_supervision_needs(assessment.cognitive)
+        recommendations.extend(result.get("equipment", []))
+        care_instructions.extend(result.get("care_advice", []))
+
     if assessment.elimination:
         recommendations.extend(
             evaluate_elimination_needs(assessment.elimination)
@@ -55,12 +50,12 @@ def generate_discharge_report(assessment: AssessmentInput) -> dict:
         )
 
     if assessment.home_environment and assessment.mobility:
-        home_result = evaluate_home_environment_needs(
+        result = evaluate_home_environment_needs(
             assessment.home_environment,
             assessment.mobility
         )
-        care_instructions.extend(home_result["care_advice"])
-    
+        care_instructions.extend(result.get("care_advice", []))
+
     return {
         "equipment_recommended": recommendations,
         "care_instructions": care_instructions
