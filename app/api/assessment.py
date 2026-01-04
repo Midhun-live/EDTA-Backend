@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Depends
 from datetime import datetime
 import uuid
 
@@ -6,7 +6,6 @@ from app.models.input_models import AssessmentInput
 from app.api.orchestrator import generate_discharge_report
 from app.services.storage import ASSESSMENTS_DB
 from app.services.auth_service import get_current_user
-from fastapi import Depends
 
 router = APIRouter()
 
@@ -16,12 +15,12 @@ def create_assessment(
     payload: AssessmentInput,
     current_user: dict = Depends(get_current_user)
 ):
-    user_id = current_user["user_id"]
-    role = current_user["role"]
-
     """
     Create a discharge assessment with patient details.
     """
+
+    user_id = current_user["user_id"]
+    role = current_user["role"]
 
     # 1️⃣ Generate clinical output (patient data NOT used here)
     output = generate_discharge_report(payload)
@@ -29,14 +28,30 @@ def create_assessment(
     assessment_id = str(uuid.uuid4())
     created_at = datetime.utcnow().isoformat()
 
+    # ✅ Patient details FROM top-level fields
+    patient_details = {
+        "name": payload.patient_name,
+        "age": payload.age,
+        "contact_number": payload.contact_number,
+        "discharge_date": payload.discharge_date.isoformat()
+    }
+
+    # ✅ Clinical input only (exclude patient metadata)
+    clinical_input = payload.dict(exclude={
+        "patient_name",
+        "age",
+        "contact_number",
+        "discharge_date"
+    })
+
     assessment_record = {
         "id": assessment_id,
 
-        # ✅ patient details FROM FORM
-        "patient": payload.patient.dict(),
+        # patient metadata
+        "patient": patient_details,
 
         # clinical
-        "input_data": payload.dict(exclude={"patient"}),
+        "input_data": clinical_input,
         "output_data": output,
 
         # user mapping
@@ -50,7 +65,7 @@ def create_assessment(
 
     return {
         "assessment_id": assessment_id,
-        "patient": assessment_record["patient"],
+        "patient": patient_details,
         "created_by": {
             "user_id": user_id,
             "role": role
@@ -59,14 +74,17 @@ def create_assessment(
         "output": output
     }
 
+
 @router.get("/assessments/{assessment_id}")
 def get_assessment(
     assessment_id: str,
     current_user: dict = Depends(get_current_user)
 ):
     print("ASSESSMENTS_DB:", ASSESSMENTS_DB)
+
     user_id = current_user["user_id"]
     role = current_user["role"]
+
     for assessment in ASSESSMENTS_DB:
         if assessment["id"] == assessment_id:
             if assessment["created_by_user_id"] != user_id:

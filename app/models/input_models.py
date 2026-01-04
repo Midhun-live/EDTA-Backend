@@ -3,13 +3,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from enum import Enum
-
-
-class PatientInfo(BaseModel):
-    name: str
-    age: int
-    phone: str
-    address: str
+from datetime import date
 
 
 class RespiratoryInput(BaseModel):
@@ -69,7 +63,10 @@ class HomeEnvironmentInput(BaseModel):
     lift_available: bool
 
 class AssessmentInput(BaseModel):
-    patient: PatientInfo
+    patient_name: str
+    age: int
+    contact_number: str
+    discharge_date: date    
     respiratory: RespiratoryInput
     mobility: MobilityInput
     pressure_injury: PressureInjuryInput
