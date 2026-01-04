@@ -6,10 +6,26 @@ from enum import Enum
 from datetime import date
 
 
+from pydantic import BaseModel
+from typing import Optional
+
+
 class RespiratoryInput(BaseModel):
-    spo2: Optional[int] = None
-    on_oxygen: Optional[bool] = None
-    oxygen_flow_lpm: Optional[int] = None
+    # Core oxygenation
+    spo2: int
+    on_oxygen: bool
+    oxygen_flow_lpm: Optional[float] = None
+
+    # Non-invasive ventilation
+    on_niv: bool = False
+    ipap: Optional[int] = None
+    epap: Optional[int] = None
+    peep: Optional[int] = None
+
+    # Airway
+    tracheostomy: bool = False
+    requires_suctioning: bool = False
+
 
 
 

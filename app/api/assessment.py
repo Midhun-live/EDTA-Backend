@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 from datetime import datetime
 import uuid
 
 from app.models.input_models import AssessmentInput
+from app.models.assessment_record import AssessmentRecord
 from app.api.orchestrator import generate_discharge_report
-from app.services.storage import ASSESSMENTS_DB
 from app.services.auth_service import get_current_user
+from app.db.deps import get_db
 
 router = APIRouter()
 
@@ -13,92 +15,104 @@ router = APIRouter()
 @router.post("/assessments")
 def create_assessment(
     payload: AssessmentInput,
-    current_user: dict = Depends(get_current_user)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
-    """
-    Create a discharge assessment with patient details.
-    """
+    assessment_id = str(uuid.uuid4())
 
-    user_id = current_user["user_id"]
-    role = current_user["role"]
-
-    # 1️⃣ Generate clinical output (patient data NOT used here)
+    # 1️⃣ Generate clinical output
     output = generate_discharge_report(payload)
 
-    assessment_id = str(uuid.uuid4())
-    created_at = datetime.utcnow().isoformat()
-
-    # ✅ Patient details FROM top-level fields
-    patient_details = {
+    # 2️⃣ Patient JSON (JSON-safe)
+    patient_data = {
         "name": payload.patient_name,
         "age": payload.age,
         "contact_number": payload.contact_number,
         "discharge_date": payload.discharge_date.isoformat()
+        if payload.discharge_date else None,
     }
 
-    # ✅ Clinical input only (exclude patient metadata)
-    clinical_input = payload.dict(exclude={
-        "patient_name",
-        "age",
-        "contact_number",
-        "discharge_date"
-    })
+    # 3️⃣ ORM record
+    record = AssessmentRecord(
+        id=assessment_id,
+        user_id=current_user["user_id"],
+        patient=patient_data,
+        input_data=payload.model_dump(
+            exclude={
+                "patient_name",
+                "age",
+                "contact_number",
+                "discharge_date"
+            }
+        ),
+        output_data=output,
+        created_at=datetime.utcnow(),
+    )
 
-    assessment_record = {
-        "id": assessment_id,
-
-        # patient metadata
-        "patient": patient_details,
-
-        # clinical
-        "input_data": clinical_input,
-        "output_data": output,
-
-        # user mapping
-        "created_by_user_id": user_id,
-        "created_by_role": role,
-
-        "created_at": created_at
-    }
-
-    ASSESSMENTS_DB.append(assessment_record)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
 
     return {
-        "assessment_id": assessment_id,
-        "patient": patient_details,
-        "created_by": {
-            "user_id": user_id,
-            "role": role
-        },
-        "created_at": created_at,
-        "output": output
+        "assessment_id": record.id,
+        "patient": record.patient,
+        "created_at": record.created_at,
+        "output": record.output_data,
     }
+
 
 
 @router.get("/assessments/{assessment_id}")
 def get_assessment(
     assessment_id: str,
-    current_user: dict = Depends(get_current_user)
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
-    print("ASSESSMENTS_DB:", ASSESSMENTS_DB)
+    """
+    Fetch a single assessment (only if owned by user)
+    """
 
-    user_id = current_user["user_id"]
-    role = current_user["role"]
+    assessment = (
+        db.query(AssessmentRecord)
+        .filter(
+            AssessmentRecord.id == assessment_id,
+            AssessmentRecord.user_id == current_user["user_id"],
+        )
+        .first()
+    )
 
-    for assessment in ASSESSMENTS_DB:
-        if assessment["id"] == assessment_id:
-            if assessment["created_by_user_id"] != user_id:
-                return {"error": "Access denied"}
+    if not assessment:
+        raise HTTPException(status_code=404, detail="Assessment not found")
 
-            return {
-                "assessment_id": assessment["id"],
-                "patient": assessment["patient"],
-                "created_at": assessment["created_at"],
-                "created_by": {
-                    "user_id": user_id,
-                    "role": role
-                },
-                "output": assessment["output_data"]
-            }
+    return {
+        "assessment_id": assessment.id,
+        "patient": assessment.patient,
+        "created_at": assessment.created_at,
+        "output": assessment.output_data,
+    }
 
-    return {"error": "Assessment not found"}
+
+@router.get("/assessments")
+def list_assessments(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    List all assessments created by logged-in user
+    """
+
+    records = (
+        db.query(AssessmentRecord)
+        .filter(AssessmentRecord.user_id == current_user["user_id"])
+        .order_by(AssessmentRecord.created_at.desc())
+        .all()
+    )
+
+    return [
+        {
+            "assessment_id": r.id,
+            "patient": r.patient,
+            "created_at": r.created_at,
+        }
+        for r in records
+    ]
