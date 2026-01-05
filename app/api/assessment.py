@@ -12,41 +12,29 @@ from app.db.deps import get_db
 router = APIRouter()
 
 
+from fastapi import Body
+from app.models.input_models import AssessmentInput
+from fastapi.encoders import jsonable_encoder
+
 @router.post("/assessments")
 def create_assessment(
-    payload: AssessmentInput,
+    payload: AssessmentInput = Body(...),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    assessment_id = str(uuid.uuid4())
-
-    # 1️⃣ Generate clinical output
     output = generate_discharge_report(payload)
 
-    # 2️⃣ Patient JSON (JSON-safe)
-    patient_data = {
-        "name": payload.patient_name,
-        "age": payload.age,
-        "contact_number": payload.contact_number,
-        "discharge_date": payload.discharge_date.isoformat()
-        if payload.discharge_date else None,
-    }
-
-    # 3️⃣ ORM record
     record = AssessmentRecord(
-        id=assessment_id,
+        id=str(uuid.uuid4()),
         user_id=current_user["user_id"],
-        patient=patient_data,
-        input_data=payload.model_dump(
-            exclude={
-                "patient_name",
-                "age",
-                "contact_number",
-                "discharge_date"
-            }
-        ),
-        output_data=output,
-        created_at=datetime.utcnow(),
+        patient={
+            "name": payload.patient_name,
+            "age": payload.age,
+            "contact_number": payload.contact_number,
+            "discharge_date": payload.discharge_date.isoformat(),
+        },
+        input_data=jsonable_encoder(payload),
+        output_data=jsonable_encoder(output),
     )
 
     db.add(record)
@@ -59,8 +47,6 @@ def create_assessment(
         "created_at": record.created_at,
         "output": record.output_data,
     }
-
-
 
 @router.get("/assessments/{assessment_id}")
 def get_assessment(
