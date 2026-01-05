@@ -39,25 +39,31 @@ def generate_discharge_report(assessment):
             "care_instructions": []
         },
         "mobility": {
-            "equipment": mob_eq
+            "equipment": mob_eq,
+            "care_instructions": []
         },
         "pressure_injury": {
-            "equipment": press_eq
+            "equipment": press_eq,
+            "care_instructions": []
         },
         "feeding": {
-            "equipment": feed_eq
+            "equipment": feed_eq,
+            "care_instructions": []
         },
         "cognitive": {
             "equipment": cog_eq,
             "care_instructions": cog_adv
         },
         "elimination": {
-            "equipment": elim_eq
+            "equipment": elim_eq,
+            "care_instructions": []
         },
         "wound_care": {
-            "equipment": wound_eq
+            "equipment": wound_eq,
+            "care_instructions": []
         },
         "home_environment": {
+            "equipment": [],
             "care_instructions": home_adv
         }
     }
