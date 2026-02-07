@@ -6,7 +6,7 @@ import uuid
 from app.models.input_models import AssessmentInput
 from app.models.assessment_record import AssessmentRecord
 from app.api.orchestrator import generate_discharge_report
-from app.services.auth_service import get_current_user
+from app.db.deps import get_current_user
 from app.db.deps import get_db
 
 router = APIRouter()
@@ -26,7 +26,7 @@ def create_assessment(
 
     record = AssessmentRecord(
         id=str(uuid.uuid4()),
-        user_id=current_user["user_id"],
+        user_id=current_user.id,
         patient={
             "name": payload.patient_name,
             "age": payload.age,
@@ -62,7 +62,7 @@ def get_assessment(
         db.query(AssessmentRecord)
         .filter(
             AssessmentRecord.id == assessment_id,
-            AssessmentRecord.user_id == current_user["user_id"],
+            AssessmentRecord.user_id == current_user.id,
         )
         .first()
     )

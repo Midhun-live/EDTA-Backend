@@ -1,26 +1,18 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, EmailStr
 
 
 class SignupRequest(BaseModel):
     name: str
-    email: str
+    email: EmailStr
     password: str
-    role: str   # Nurse / Doctor / Paramedic
+    role: str
 
 
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 
-class AuthResponse(BaseModel):
+class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-
-
-class UserResponse(BaseModel):
-    id: str
-    name: str
-    email: str
-    role: str
