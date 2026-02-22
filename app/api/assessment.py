@@ -16,6 +16,7 @@ from fastapi import Body
 from app.models.input_models import AssessmentInput
 from fastapi.encoders import jsonable_encoder
 
+
 @router.post("/assessments")
 def create_assessment(
     payload: AssessmentInput = Body(...),
@@ -47,6 +48,7 @@ def create_assessment(
         "created_at": record.created_at,
         "output": record.output_data,
     }
+
 
 @router.get("/assessments/{assessment_id}")
 def get_assessment(
