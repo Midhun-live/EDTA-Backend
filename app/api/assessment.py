@@ -50,6 +50,33 @@ def create_assessment(
     }
 
 
+@router.get("/assessments/my")
+def get_my_assessments(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Fetch a minimal list of assessments owned by the logged-in user.
+    """
+    records = (
+        db.query(AssessmentRecord)
+        .filter(AssessmentRecord.user_id == current_user.id)
+        .order_by(AssessmentRecord.created_at.desc())
+        .all()
+    )
+
+    return [
+        {
+            "assessment_id": r.id,
+            "patient_name": r.patient.get("name") if r.patient else "Unknown",
+            "age": r.patient.get("age") if r.patient else None,
+            "discharge_date": r.patient.get("discharge_date") if r.patient else None,
+            "created_at": r.created_at,
+        }
+        for r in records
+    ]
+
+
 @router.get("/assessments/{assessment_id}")
 def get_assessment(
     assessment_id: str,
@@ -91,7 +118,7 @@ def list_assessments(
 
     records = (
         db.query(AssessmentRecord)
-        .filter(AssessmentRecord.user_id == current_user["user_id"])
+        .filter(AssessmentRecord.user_id == current_user.id)
         .order_by(AssessmentRecord.created_at.desc())
         .all()
     )

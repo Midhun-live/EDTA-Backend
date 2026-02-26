@@ -71,6 +71,7 @@ def signup(
     return create_access_token({
         "sub": user.id,
         "email": user.email,
+        "name": user.name,
         "role": user.role
     })
 
@@ -87,5 +88,6 @@ def login(db: Session, email: str, password: str) -> str:
     return create_access_token({
         "sub": user.id,
         "email": user.email,
+        "name": user.name,
         "role": user.role
     })
