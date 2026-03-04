@@ -36,20 +36,51 @@ from fastapi import Body
 from app.models.input_models import AssessmentInput
 from fastapi.encoders import jsonable_encoder
 
-async def send_assessment_email(assessment, pdf_link):
+def generate_assessment_pdf_buffer(assessment: AssessmentRecord) -> BytesIO:
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # ✅ Metadata at top
+    elements.append(Paragraph("EDTA Assessment Report", styles["Heading1"]))
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(f"Account Holder: {assessment.user.name}", styles["Normal"]))
+    elements.append(Paragraph(f"Account Email: {assessment.user.email}", styles["Normal"]))
+    elements.append(Spacer(1, 12))
+
+    elements.append(Paragraph(f"Patient Name: {assessment.patient_name}", styles["Normal"]))
+    elements.append(Paragraph(f"Age: {assessment.patient_age}", styles["Normal"]))
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+from fastapi import UploadFile
+
+async def send_assessment_email_with_pdf(assessment: AssessmentRecord):
+    pdf_buffer = generate_assessment_pdf_buffer(assessment)
+    pdf_buffer.seek(0)
+    
+    pdf_attachment = UploadFile(
+        filename=f"assessment_{assessment.id}.pdf",
+        file=pdf_buffer,
+        headers={"content-type": "application/pdf"}
+    )
+
     message = MessageSchema(
-        subject="New Assessment Created",
-        recipients=["midhunchakkaravarthybaz@gmail.com"],
+        subject="New EDTA Assessment Created",
+        recipients=["midhunchakkaravarthy07@gmail.com"],
         body=f"""
         A new assessment has been created.
 
         Account Holder: {assessment.user.name}
         Account Email: {assessment.user.email}
 
-        PDF Link:
-        {pdf_link}
+        The assessment PDF is attached.
         """,
-        subtype="plain"
+        subtype="plain",
+        attachments=[pdf_attachment]
     )
 
     fm = FastMail(conf)
@@ -89,9 +120,7 @@ async def create_assessment(
         db.commit()
 
     share_url = f"https://your-frontend.vercel.app/share/{record.share_id}"
-    pdf_link = f"https://edta-backend.onrender.com/assessments/{record.id}/pdf"
-    
-    background_tasks.add_task(send_assessment_email, record, pdf_link)
+    background_tasks.add_task(send_assessment_email_with_pdf, record)
 
     return {
         "assessment_id": record.id,
@@ -153,23 +182,7 @@ def download_assessment_pdf(id: str, db: Session = Depends(get_db)):
     if not assessment:
         raise HTTPException(status_code=404, detail="Not Found")
 
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer)
-    elements = []
-    styles = getSampleStyleSheet()
-
-    # ✅ Metadata at top
-    elements.append(Paragraph("EDTA Assessment Report", styles["Heading1"]))
-    elements.append(Spacer(1, 12))
-    elements.append(Paragraph(f"Account Holder: {assessment.user.name}", styles["Normal"]))
-    elements.append(Paragraph(f"Account Email: {assessment.user.email}", styles["Normal"]))
-    elements.append(Spacer(1, 12))
-
-    elements.append(Paragraph(f"Patient Name: {assessment.patient_name}", styles["Normal"]))
-    elements.append(Paragraph(f"Age: {assessment.patient_age}", styles["Normal"]))
-
-    doc.build(elements)
-    buffer.seek(0)
+    buffer = generate_assessment_pdf_buffer(assessment)
 
     return StreamingResponse(
         buffer,
