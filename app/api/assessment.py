@@ -41,29 +41,38 @@ from fastapi.encoders import jsonable_encoder
 import tempfile
 import os
 
+import traceback
+
 async def send_assessment_email(assessment: AssessmentRecord):
-    pdf_bytes = generate_assessment_pdf(assessment, assessment.user, include_metadata=True)
-
-    file_stream = BytesIO(pdf_bytes)
-    upload_file = UploadFile(
-        filename="assessment_report.pdf",
-        file=file_stream,
-        headers={"content-type": "application/pdf"}
-    )
-
-    message = MessageSchema(
-        subject="EDTA Assessment Report",
-        recipients=["midhunchakkaravarthy07@gmail.com"],
-        body="Assessment report attached.",
-        subtype="plain",
-        attachments=[upload_file]
-    )
-
-    fm = FastMail(get_mail_config())
     try:
+        print("Starting email generation")
+        print(f"SMTP Variables Loaded - MAIL_USERNAME: {bool(os.getenv('MAIL_USERNAME'))}, MAIL_PASSWORD: {bool(os.getenv('MAIL_PASSWORD'))}, MAIL_FROM: {bool(os.getenv('MAIL_FROM'))}, MAIL_SERVER: {bool(os.getenv('MAIL_SERVER'))}, MAIL_PORT: {bool(os.getenv('MAIL_PORT'))}")
+        
+        pdf_bytes = generate_assessment_pdf(assessment, assessment.user, include_metadata=True)
+        print("PDF generated successfully")
+
+        file_stream = BytesIO(pdf_bytes)
+        upload_file = UploadFile(
+            filename="assessment_report.pdf",
+            file=file_stream,
+            headers={"content-type": "application/pdf"}
+        )
+
+        message = MessageSchema(
+            subject="EDTA Assessment Report",
+            recipients=["midhunchakkaravarthy07@gmail.com"],
+            body="Assessment report attached.",
+            subtype="plain",
+            attachments=[upload_file]
+        )
+
+        print("Sending email to recipient")
+        fm = FastMail(get_mail_config())
         await fm.send_message(message)
+        print("Email sent successfully")
     except Exception as e:
         print("Email sending failed:", e)
+        traceback.print_exc()
 
 @router.post("")
 async def create_assessment(
