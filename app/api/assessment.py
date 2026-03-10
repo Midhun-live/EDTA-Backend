@@ -29,7 +29,7 @@ conf = ConnectionConfig(
     VALIDATE_CERTS=True,
 )
 
-router = APIRouter(prefix="/assessments")
+router = APIRouter(prefix="/assessments", tags=["assessments"])
 share_router = APIRouter(prefix="/share")
 
 
