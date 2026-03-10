@@ -33,8 +33,9 @@ import os
 
 import traceback
 
-def send_assessment_email(assessment: AssessmentRecord):
+async def send_assessment_email(assessment: AssessmentRecord):
     try:
+        print("Email function triggered")
         print("Starting email generation")
         print(f"SMTP Variables Loaded - MAIL_USERNAME: {bool(os.getenv('MAIL_USERNAME'))}, MAIL_PASSWORD: {bool(os.getenv('MAIL_PASSWORD'))}, MAIL_FROM: {bool(os.getenv('MAIL_FROM'))}, MAIL_SERVER: {bool(os.getenv('MAIL_SERVER'))}, MAIL_PORT: {bool(os.getenv('MAIL_PORT'))}")
         
@@ -107,6 +108,7 @@ async def create_assessment(
 
     share_url = f"https://your-frontend.vercel.app/share/{record.share_token}"
     
+    print("Assessment created, scheduling email task")
     background_tasks.add_task(send_assessment_email, record)
 
     return {
