@@ -29,6 +29,8 @@ conf = ConnectionConfig(
     VALIDATE_CERTS=True,
 )
 
+ConnectionConfig.model_rebuild()
+
 router = APIRouter(prefix="/assessments", tags=["assessments"])
 share_router = APIRouter(prefix="/share")
 
