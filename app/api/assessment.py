@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
 from sqlalchemy.orm import Session
+from pydantic import SecretStr
 from datetime import datetime
 import uuid
 
@@ -18,8 +19,8 @@ from io import BytesIO
 from app.services.pdf_service import generate_assessment_pdf
 
 conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
-    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
+    MAIL_USERNAME=SecretStr(os.getenv("MAIL_USERNAME", "")),
+    MAIL_PASSWORD=SecretStr(os.getenv("MAIL_PASSWORD", "")),
     MAIL_FROM=os.getenv("MAIL_FROM"),
     MAIL_PORT=int(os.getenv("MAIL_PORT", 587)),
     MAIL_SERVER=os.getenv("MAIL_SERVER"),
@@ -28,6 +29,7 @@ conf = ConnectionConfig(
     USE_CREDENTIALS=True,
     VALIDATE_CERTS=True,
 )
+ConnectionConfig.model_rebuild()
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
 share_router = APIRouter(prefix="/share")
