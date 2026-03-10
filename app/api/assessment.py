@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
 from sqlalchemy.orm import Session
 from datetime import datetime
 import uuid
@@ -12,10 +12,10 @@ from app.db.deps import get_db
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 import os
 
-from fastapi.responses import StreamingResponse
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+from fastapi.responses import StreamingResponse, Response
 from io import BytesIO
+
+from app.services.pdf_service import generate_assessment_pdf
 
 conf = ConnectionConfig(
     MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
@@ -29,58 +29,33 @@ conf = ConnectionConfig(
     VALIDATE_CERTS=True,
 )
 
-router = APIRouter()
+router = APIRouter(prefix="/assessments")
+share_router = APIRouter(prefix="/share")
 
 
 from fastapi import Body
 from app.models.input_models import AssessmentInput
 from fastapi.encoders import jsonable_encoder
 
-def generate_assessment_pdf_buffer(assessment: AssessmentRecord) -> BytesIO:
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer)
-    elements = []
-    styles = getSampleStyleSheet()
+import tempfile
+import os
 
-    # ✅ Metadata at top
-    elements.append(Paragraph("EDTA Assessment Report", styles["Heading1"]))
-    elements.append(Spacer(1, 12))
-    elements.append(Paragraph(f"Account Holder: {assessment.user.name}", styles["Normal"]))
-    elements.append(Paragraph(f"Account Email: {assessment.user.email}", styles["Normal"]))
-    elements.append(Spacer(1, 12))
+async def send_assessment_email(assessment: AssessmentRecord):
+    pdf_bytes = generate_assessment_pdf(assessment, assessment.user)
 
-    elements.append(Paragraph(f"Patient Name: {assessment.patient_name}", styles["Normal"]))
-    elements.append(Paragraph(f"Age: {assessment.patient_age}", styles["Normal"]))
-
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
-
-from fastapi import UploadFile
-
-async def send_assessment_email_with_pdf(assessment: AssessmentRecord):
-    pdf_buffer = generate_assessment_pdf_buffer(assessment)
-    pdf_buffer.seek(0)
-    
-    pdf_attachment = UploadFile(
-        filename=f"assessment_{assessment.id}.pdf",
-        file=pdf_buffer,
+    file_stream = BytesIO(pdf_bytes)
+    upload_file = UploadFile(
+        filename="assessment_report.pdf",
+        file=file_stream,
         headers={"content-type": "application/pdf"}
     )
 
     message = MessageSchema(
-        subject="New EDTA Assessment Created",
+        subject="EDTA Assessment Report",
         recipients=["midhunchakkaravarthy07@gmail.com"],
-        body=f"""
-        A new assessment has been created.
-
-        Account Holder: {assessment.user.name}
-        Account Email: {assessment.user.email}
-
-        The assessment PDF is attached.
-        """,
+        body="Assessment report attached.",
         subtype="plain",
-        attachments=[pdf_attachment]
+        attachments=[upload_file]
     )
 
     fm = FastMail(conf)
@@ -89,7 +64,7 @@ async def send_assessment_email_with_pdf(assessment: AssessmentRecord):
     except Exception as e:
         print("Email sending failed:", e)
 
-@router.post("/assessments")
+@router.post("")
 async def create_assessment(
     background_tasks: BackgroundTasks,
     payload: AssessmentInput = Body(...),
@@ -119,34 +94,23 @@ async def create_assessment(
         record.share_token = str(uuid.uuid4())
         db.commit()
 
-    share_url = f"https://your-frontend.vercel.app/share/{record.share_id}"
-    background_tasks.add_task(send_assessment_email_with_pdf, record)
+    share_url = f"https://your-frontend.vercel.app/share/{record.share_token}"
+    
+    background_tasks.add_task(send_assessment_email, record)
 
     return {
         "assessment_id": record.id,
         "share_token": record.share_token,
-        "share_id": record.share_id,
         "share_url": share_url,
         "patient": record.patient,
         "created_at": record.created_at,
         "output": record.output_data,
     }
 
-@router.get("/share/{share_id}")
-def get_shared_assessment(share_id: str, db: Session = Depends(get_db)):
-    assessment = (
-        db.query(AssessmentRecord)
-        .filter(AssessmentRecord.share_id == share_id)
-        .first()
-    )
-
-    if not assessment:
-        raise HTTPException(status_code=404, detail="Assessment not found")
-
-    return assessment.output_data
 
 
-@router.get("/assessments/my")
+
+@router.get("/my")
 def get_my_assessments(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
@@ -173,27 +137,27 @@ def get_my_assessments(
     ]
 
 
-@router.get("/assessments/{id}/pdf")
-def download_assessment_pdf(id: str, db: Session = Depends(get_db)):
+@router.get("/{assessment_id}/pdf")
+def download_pdf(assessment_id: str, db: Session = Depends(get_db)):
     assessment = db.query(AssessmentRecord).filter(
-        AssessmentRecord.id == id
+        AssessmentRecord.id == assessment_id
     ).first()
-
+    
     if not assessment:
-        raise HTTPException(status_code=404, detail="Not Found")
+        raise HTTPException(status_code=404, detail="Assessment not found")
+        
+    pdf_bytes = generate_assessment_pdf(assessment, assessment.user)
 
-    buffer = generate_assessment_pdf_buffer(assessment)
-
-    return StreamingResponse(
-        buffer,
+    return Response(
+        content=pdf_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f"attachment; filename=assessment_{id}.pdf"
-        },
+            "Content-Disposition": 'attachment; filename="assessment_report.pdf"'
+        }
     )
 
 
-@router.get("/assessments/{assessment_id}")
+@router.get("/{assessment_id}")
 def get_assessment(
     assessment_id: str,
     db: Session = Depends(get_db),
@@ -228,7 +192,7 @@ def get_assessment(
     }
 
 
-@router.get("/assessments")
+@router.get("")
 def list_assessments(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
@@ -253,15 +217,17 @@ def list_assessments(
         for r in records
     ]
 
-@router.get("/share/{token}")
-def get_shared_assessment_by_token(token: str, db: Session = Depends(get_db)):
+@share_router.get("/{share_token}")
+def get_shared_assessment(share_token: str, db: Session = Depends(get_db)):
     assessment = db.query(AssessmentRecord).filter(
-        AssessmentRecord.share_token == token
+        AssessmentRecord.share_token == share_token
     ).first()
 
     if not assessment:
         raise HTTPException(status_code=404, detail="Assessment not found")
 
-    return assessment
-
-    return assessment
+    return {
+        "patient": assessment.patient,
+        "created_at": assessment.created_at,
+        "output": assessment.output_data
+    }
