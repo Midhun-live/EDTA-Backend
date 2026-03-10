@@ -34,20 +34,19 @@ import os
 
 import traceback
 
-async def send_assessment_email(assessment: AssessmentRecord):
+def send_assessment_email_sync(assessment: AssessmentRecord):
     try:
-        print("Email function triggered")
-        print("Starting email generation")
-        print(f"SMTP Variables Loaded - MAIL_USERNAME: {bool(os.getenv('MAIL_USERNAME'))}, MAIL_PASSWORD: {bool(os.getenv('MAIL_PASSWORD'))}, MAIL_FROM: {bool(os.getenv('MAIL_FROM'))}, MAIL_SERVER: {bool(os.getenv('MAIL_SERVER'))}, MAIL_PORT: {bool(os.getenv('MAIL_PORT'))}")
+        print("EMAIL: starting send process")
         
         pdf_bytes = generate_assessment_pdf(assessment, assessment.user, include_metadata=True)
         print("PDF generated successfully")
 
         msg = EmailMessage()
         msg['Subject'] = "EDTA Assessment Report"
-        msg['From'] = os.getenv("MAIL_FROM", "noreply@edta.com")
-        msg['To'] = "midhunchakkaravarthy07@gmail.com"
-        msg.set_content("A new assessment report has been generated. Please find the attached PDF.")
+        msg['From'] = os.getenv("MAIL_FROM")
+        # For testing, user requested to use MAIL_USERNAME as recipient
+        msg['To'] = os.getenv("MAIL_USERNAME")
+        msg.set_content("Assessment report attached.")
 
         msg.add_attachment(
             pdf_bytes,
@@ -56,26 +55,25 @@ async def send_assessment_email(assessment: AssessmentRecord):
             filename="assessment_report.pdf"
         )
 
-        print("Sending assessment email")
-        mail_server = os.getenv("MAIL_SERVER", "")
+        mail_server = os.getenv("MAIL_SERVER", "smtp.gmail.com")
         mail_port = int(os.getenv("MAIL_PORT", 587))
-        mail_username = os.getenv("MAIL_USERNAME", "")
-        mail_password = os.getenv("MAIL_PASSWORD", "")
+        mail_username = os.getenv("MAIL_USERNAME")
+        mail_password = os.getenv("MAIL_PASSWORD")
 
-        if not mail_server or not mail_username or not mail_password:
-            raise ValueError("SMTP configuration is missing from environment variables.")
-
-        server = smtplib.SMTP(mail_server, mail_port)
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-        server.login(mail_username, mail_password)
-        server.send_message(msg)
-        server.quit()
-        print("Email sent successfully")
+        print("EMAIL: connecting to SMTP")
+        with smtplib.SMTP(mail_server, mail_port) as server:
+            server.starttls()
+            server.login(mail_username, mail_password)
+            server.send_message(msg)
+        
+        print("EMAIL: email sent successfully")
     except Exception as e:
-        print(f"Email sending failed: {e}")
+        print("EMAIL ERROR:", e)
         traceback.print_exc()
+
+async def send_assessment_email(assessment: AssessmentRecord):
+    # Keeping the async one for now but referencing the sync logic or replacing
+    send_assessment_email_sync(assessment)
 
 @router.get("/test-email")
 async def test_email(background_tasks: BackgroundTasks):
@@ -158,8 +156,8 @@ async def create_assessment(
 
     share_url = f"https://your-frontend.vercel.app/share/{record.share_token}"
     
-    print("Assessment created, scheduling email task")
-    background_tasks.add_task(send_assessment_email, record)
+    print("Assessment created, starting synchronous email send")
+    send_assessment_email_sync(record)
 
     return {
         "assessment_id": record.id,
