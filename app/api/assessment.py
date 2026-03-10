@@ -41,7 +41,7 @@ import tempfile
 import os
 
 async def send_assessment_email(assessment: AssessmentRecord):
-    pdf_bytes = generate_assessment_pdf(assessment, assessment.user)
+    pdf_bytes = generate_assessment_pdf(assessment, assessment.user, include_metadata=True)
 
     file_stream = BytesIO(pdf_bytes)
     upload_file = UploadFile(
