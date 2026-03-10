@@ -17,6 +17,7 @@ from fastapi.responses import StreamingResponse, Response
 from io import BytesIO
 
 from app.services.pdf_service import generate_assessment_pdf
+from reportlab.pdfgen import canvas
 
 
 
@@ -75,6 +76,55 @@ async def send_assessment_email(assessment: AssessmentRecord):
     except Exception as e:
         print(f"Email sending failed: {e}")
         traceback.print_exc()
+
+@router.get("/test-email")
+async def test_email(background_tasks: BackgroundTasks):
+    print("TEST EMAIL ENDPOINT TRIGGERED")
+    
+    def run_test():
+        try:
+            print("Generating test PDF")
+            buffer = BytesIO()
+            p = canvas.Canvas(buffer)
+            p.drawString(100, 750, "This is a test PDF for EDTA Email Verification.")
+            p.showPage()
+            p.save()
+            pdf_bytes = buffer.getvalue()
+            buffer.close()
+
+            print("Attempting to send email")
+            msg = EmailMessage()
+            msg['Subject'] = "EDTA Test Email"
+            msg['From'] = os.getenv("MAIL_FROM", "noreply@edta.com")
+            msg['To'] = "midhunchakkaravarthy07@gmail.com"
+            msg.set_content("This is a test email to verify SMTP configuration.")
+
+            msg.add_attachment(
+                pdf_bytes,
+                maintype="application",
+                subtype="pdf",
+                filename="test_report.pdf"
+            )
+
+            mail_server = os.getenv("MAIL_SERVER", "")
+            mail_port = int(os.getenv("MAIL_PORT", 587))
+            mail_username = os.getenv("MAIL_USERNAME", "")
+            mail_password = os.getenv("MAIL_PASSWORD", "")
+
+            server = smtplib.SMTP(mail_server, mail_port)
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(mail_username, mail_password)
+            server.send_message(msg)
+            server.quit()
+            print("Test email sent successfully")
+        except Exception as e:
+            print(f"Test email failed: {e}")
+            traceback.print_exc()
+
+    background_tasks.add_task(run_test)
+    return {"status": "email attempt triggered"}
 
 @router.post("")
 async def create_assessment(
