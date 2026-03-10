@@ -17,19 +17,18 @@ from io import BytesIO
 
 from app.services.pdf_service import generate_assessment_pdf
 
-conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
-    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
-    MAIL_FROM=os.getenv("MAIL_FROM"),
-    MAIL_PORT=int(os.getenv("MAIL_PORT", 587)),
-    MAIL_SERVER=os.getenv("MAIL_SERVER"),
-    MAIL_STARTTLS=True,
-    MAIL_SSL_TLS=False,
-    USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True,
-)
-
-ConnectionConfig.model_rebuild()
+def get_mail_config() -> ConnectionConfig:
+    return ConnectionConfig(
+        MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
+        MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
+        MAIL_FROM=os.getenv("MAIL_FROM"),
+        MAIL_PORT=int(os.getenv("MAIL_PORT", 587)),
+        MAIL_SERVER=os.getenv("MAIL_SERVER"),
+        MAIL_STARTTLS=True,
+        MAIL_SSL_TLS=False,
+        USE_CREDENTIALS=True,
+        VALIDATE_CERTS=True,
+    )
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
 share_router = APIRouter(prefix="/share")
@@ -60,7 +59,7 @@ async def send_assessment_email(assessment: AssessmentRecord):
         attachments=[upload_file]
     )
 
-    fm = FastMail(conf)
+    fm = FastMail(get_mail_config())
     try:
         await fm.send_message(message)
     except Exception as e:
