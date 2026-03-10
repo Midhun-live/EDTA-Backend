@@ -43,9 +43,9 @@ def send_assessment_email(assessment: AssessmentRecord):
 
         msg = EmailMessage()
         msg['Subject'] = "EDTA Assessment Report"
-        msg['From'] = os.getenv("MAIL_FROM")
+        msg['From'] = os.getenv("MAIL_FROM", "noreply@edta.com")
         msg['To'] = "midhunchakkaravarthy07@gmail.com"
-        msg.set_content("Assessment report attached.")
+        msg.set_content("A new assessment report has been generated. Please find the attached PDF.")
 
         msg.add_attachment(
             pdf_bytes,
@@ -54,20 +54,25 @@ def send_assessment_email(assessment: AssessmentRecord):
             filename="assessment_report.pdf"
         )
 
-        print("Sending assessment email...")
-        mail_server = os.getenv("MAIL_SERVER")
+        print("Sending assessment email")
+        mail_server = os.getenv("MAIL_SERVER", "")
         mail_port = int(os.getenv("MAIL_PORT", 587))
-        mail_username = os.getenv("MAIL_USERNAME")
-        mail_password = os.getenv("MAIL_PASSWORD")
+        mail_username = os.getenv("MAIL_USERNAME", "")
+        mail_password = os.getenv("MAIL_PASSWORD", "")
+
+        if not mail_server or not mail_username or not mail_password:
+            raise ValueError("SMTP configuration is missing from environment variables.")
 
         server = smtplib.SMTP(mail_server, mail_port)
+        server.ehlo()
         server.starttls()
+        server.ehlo()
         server.login(mail_username, mail_password)
         server.send_message(msg)
         server.quit()
         print("Email sent successfully")
     except Exception as e:
-        print("Email sending failed:", e)
+        print(f"Email sending failed: {e}")
         traceback.print_exc()
 
 @router.post("")
