@@ -9,7 +9,8 @@ from app.api.orchestrator import generate_discharge_report
 from app.db.deps import get_current_user
 from app.db.deps import get_db
 
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
+import smtplib
+from email.message import EmailMessage
 import os
 
 from fastapi.responses import StreamingResponse, Response
@@ -17,18 +18,7 @@ from io import BytesIO
 
 from app.services.pdf_service import generate_assessment_pdf
 
-def get_mail_config() -> ConnectionConfig:
-    return ConnectionConfig(
-        MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
-        MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
-        MAIL_FROM=os.getenv("MAIL_FROM"),
-        MAIL_PORT=int(os.getenv("MAIL_PORT", 587)),
-        MAIL_SERVER=os.getenv("MAIL_SERVER"),
-        MAIL_STARTTLS=True,
-        MAIL_SSL_TLS=False,
-        USE_CREDENTIALS=True,
-        VALIDATE_CERTS=True,
-    )
+
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
 share_router = APIRouter(prefix="/share")
@@ -43,7 +33,7 @@ import os
 
 import traceback
 
-async def send_assessment_email(assessment: AssessmentRecord):
+def send_assessment_email(assessment: AssessmentRecord):
     try:
         print("Starting email generation")
         print(f"SMTP Variables Loaded - MAIL_USERNAME: {bool(os.getenv('MAIL_USERNAME'))}, MAIL_PASSWORD: {bool(os.getenv('MAIL_PASSWORD'))}, MAIL_FROM: {bool(os.getenv('MAIL_FROM'))}, MAIL_SERVER: {bool(os.getenv('MAIL_SERVER'))}, MAIL_PORT: {bool(os.getenv('MAIL_PORT'))}")
@@ -51,24 +41,30 @@ async def send_assessment_email(assessment: AssessmentRecord):
         pdf_bytes = generate_assessment_pdf(assessment, assessment.user, include_metadata=True)
         print("PDF generated successfully")
 
-        file_stream = BytesIO(pdf_bytes)
-        upload_file = UploadFile(
-            filename="assessment_report.pdf",
-            file=file_stream,
-            headers={"content-type": "application/pdf"}
+        msg = EmailMessage()
+        msg['Subject'] = "EDTA Assessment Report"
+        msg['From'] = os.getenv("MAIL_FROM")
+        msg['To'] = "midhunchakkaravarthy07@gmail.com"
+        msg.set_content("Assessment report attached.")
+
+        msg.add_attachment(
+            pdf_bytes,
+            maintype="application",
+            subtype="pdf",
+            filename="assessment_report.pdf"
         )
 
-        message = MessageSchema(
-            subject="EDTA Assessment Report",
-            recipients=["midhunchakkaravarthy07@gmail.com"],
-            body="Assessment report attached.",
-            subtype="plain",
-            attachments=[upload_file]
-        )
+        print("Sending assessment email...")
+        mail_server = os.getenv("MAIL_SERVER")
+        mail_port = int(os.getenv("MAIL_PORT", 587))
+        mail_username = os.getenv("MAIL_USERNAME")
+        mail_password = os.getenv("MAIL_PASSWORD")
 
-        print("Sending email to recipient")
-        fm = FastMail(get_mail_config())
-        await fm.send_message(message)
+        server = smtplib.SMTP(mail_server, mail_port)
+        server.starttls()
+        server.login(mail_username, mail_password)
+        server.send_message(msg)
+        server.quit()
         print("Email sent successfully")
     except Exception as e:
         print("Email sending failed:", e)
