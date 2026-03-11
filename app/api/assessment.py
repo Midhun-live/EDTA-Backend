@@ -199,7 +199,7 @@ async def create_assessment(
     
     print("Assessment created successfully")
     print("Triggering email sending...")
-    send_assessment_email_sync(record, db)
+    background_tasks.add_task(send_assessment_email_sync, record, db)
 
     return {
         "assessment_id": record.id,
