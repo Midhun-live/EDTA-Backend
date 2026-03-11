@@ -54,7 +54,7 @@ def send_assessment_email_sync(assessment: AssessmentRecord, db: Session):
         msg = EmailMessage()
         msg['Subject'] = "EDTA Assessment Report"
         msg['From'] = os.getenv("MAIL_FROM")
-        msg['To'] = "midhunchakkaravarthy07@gmail.com"
+        msg['To'] = "eldersmilesllp@gmail.com"
         msg.set_content("Please find the attached assessment report.")
 
         msg.add_attachment(
@@ -102,7 +102,7 @@ async def test_email(background_tasks: BackgroundTasks):
             msg = EmailMessage()
             msg['Subject'] = "EDTA Test Email"
             msg['From'] = os.getenv("MAIL_FROM", "noreply@edta.com")
-            msg['To'] = "midhunchakkaravarthy07@gmail.com"
+            msg['To'] = "eldersmilesllp@gmail.com"
             msg.set_content("This is a test email to verify SMTP configuration.")
 
             msg.add_attachment(

@@ -13,7 +13,7 @@ import random
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 def send_email_otp(to_email: str, otp: str):
-    sender_email = "midhunchakkaravarthy07@gmail.com"
+    sender_email = "eldersmilesllp@gmail.com"
     sender_password = "eepw bwfe fpvw rpae"
 
     msg = MIMEText(f"Your OTP is: {otp}")
