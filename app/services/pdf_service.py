@@ -34,20 +34,26 @@ def generate_assessment_pdf(assessment, user=None, include_metadata: bool = Fals
         elements.append(Paragraph(f"Generated At: {created_str}", styles["Normal"]))
         elements.append(Spacer(1, 15))
 
-    # Patient Summary (3-Column Layout)
+    # Patient Summary (Dynamic Column Layout)
     patient = assessment.patient if assessment.patient else {}
     p_name = patient.get("name", "Unknown")
     p_age = patient.get("age", "Unknown")
     p_date = patient.get("discharge_date", "Unknown")
+    p_contact = patient.get("contact_number", "Unknown")
     p_remarks = patient.get("remarks")
 
-    summary_data = [
-        [
-            Paragraph("<b>Patient Name:</b><br/>" + str(p_name), styles["Normal"]),
-            Paragraph("<b>Age:</b><br/>" + str(p_age), styles["Normal"]),
-            Paragraph("<b>Discharge Date:</b><br/>" + str(p_date), styles["Normal"])
-        ]
+    summary_row = [
+        Paragraph("<b>Patient Name:</b><br/>" + str(p_name), styles["Normal"]),
+        Paragraph("<b>Age:</b><br/>" + str(p_age), styles["Normal"])
     ]
+    
+    if include_metadata:
+        summary_row.append(Paragraph("<b>Contact Number:</b><br/>" + str(p_contact), styles["Normal"]))
+        
+    summary_row.append(Paragraph("<b>Discharge Date:</b><br/>" + str(p_date), styles["Normal"]))
+
+    summary_data = [summary_row]
+    col_count = len(summary_row)
     
     table_styles = [
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8F9FA")),
@@ -57,15 +63,12 @@ def generate_assessment_pdf(assessment, user=None, include_metadata: bool = Fals
     ]
     
     if p_remarks:
-        summary_data.append([
-            Paragraph("<b>Remarks:</b><br/>" + str(p_remarks), styles["Normal"]),
-            "",
-            ""
-        ])
-        table_styles.append(('SPAN', (0, 1), (2, 1)))
+        remarks_row = [Paragraph("<b>Remarks:</b><br/>" + str(p_remarks), styles["Normal"])] + [""] * (col_count - 1)
+        summary_data.append(remarks_row)
+        table_styles.append(('SPAN', (0, 1), (col_count - 1, 1)))
 
-    col_width_summary = 523 / 3.0
-    summary_table = Table(summary_data, colWidths=[col_width_summary]*3)
+    col_width_summary = 523 / float(col_count)
+    summary_table = Table(summary_data, colWidths=[col_width_summary]*col_count)
     summary_table.setStyle(TableStyle(table_styles))
     
     elements.append(summary_table)
