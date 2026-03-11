@@ -5,6 +5,7 @@ import uuid
 
 from app.models.input_models import AssessmentInput
 from app.models.assessment_record import AssessmentRecord
+from app.models.users import User
 from app.api.orchestrator import generate_discharge_report
 from app.db.deps import get_current_user
 from app.db.deps import get_db
@@ -34,12 +35,20 @@ import os
 
 import traceback
 
-def send_assessment_email_sync(assessment: AssessmentRecord):
+def send_assessment_email_sync(assessment: AssessmentRecord, db: Session):
     try:
         print("Email function triggered")
+        print("Fetching user from database")
+
+        user = db.query(User).filter(User.id == assessment.user_id).first()
+        
         print("Generating PDF report")
         
-        pdf_bytes = generate_assessment_pdf(assessment, assessment.user, include_metadata=True)
+        pdf_bytes = generate_assessment_pdf(
+            assessment, 
+            user, 
+            include_metadata=True
+        )
         print("PDF generated successfully")
 
         msg = EmailMessage()
@@ -70,9 +79,9 @@ def send_assessment_email_sync(assessment: AssessmentRecord):
         print("Email sending failed:", str(e))
         traceback.print_exc()
 
-async def send_assessment_email(assessment: AssessmentRecord):
+async def send_assessment_email(assessment: AssessmentRecord, db: Session):
     # Keeping the async one for now but referencing the sync logic or replacing
-    send_assessment_email_sync(assessment)
+    send_assessment_email_sync(assessment, db)
 
 @router.get("/test-email")
 async def test_email(background_tasks: BackgroundTasks):
@@ -190,7 +199,7 @@ async def create_assessment(
     
     print("Assessment created successfully")
     print("Triggering email sending...")
-    send_assessment_email_sync(record)
+    send_assessment_email_sync(record, db)
 
     return {
         "assessment_id": record.id,
