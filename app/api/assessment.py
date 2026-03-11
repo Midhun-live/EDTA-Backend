@@ -37,6 +37,7 @@ import traceback
 def send_assessment_email_sync(assessment: AssessmentRecord):
     try:
         print("EMAIL: starting send process")
+        print("MAIL_USERNAME loaded:", os.getenv("MAIL_USERNAME") is not None)
         
         pdf_bytes = generate_assessment_pdf(assessment, assessment.user, include_metadata=True)
         print("PDF generated successfully")
