@@ -39,6 +39,7 @@ def generate_assessment_pdf(assessment, user=None, include_metadata: bool = Fals
     p_name = patient.get("name", "Unknown")
     p_age = patient.get("age", "Unknown")
     p_date = patient.get("discharge_date", "Unknown")
+    p_remarks = patient.get("remarks")
 
     summary_data = [
         [
@@ -48,14 +49,24 @@ def generate_assessment_pdf(assessment, user=None, include_metadata: bool = Fals
         ]
     ]
     
-    col_width_summary = 523 / 3.0
-    summary_table = Table(summary_data, colWidths=[col_width_summary]*3)
-    summary_table.setStyle(TableStyle([
+    table_styles = [
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8F9FA")),
         ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#E9ECEF")),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('PADDING', (0, 0), (-1, -1), 12),
-    ]))
+    ]
+    
+    if p_remarks:
+        summary_data.append([
+            Paragraph("<b>Remarks:</b><br/>" + str(p_remarks), styles["Normal"]),
+            "",
+            ""
+        ])
+        table_styles.append(('SPAN', (0, 1), (2, 1)))
+
+    col_width_summary = 523 / 3.0
+    summary_table = Table(summary_data, colWidths=[col_width_summary]*3)
+    summary_table.setStyle(TableStyle(table_styles))
     
     elements.append(summary_table)
     elements.append(Spacer(1, 25))

@@ -90,3 +90,4 @@ class AssessmentInput(BaseModel):
     elimination: EliminationInput
     wound_care: WoundCareInput
     home_environment: HomeEnvironmentInput
+    remarks: Optional[str] = None

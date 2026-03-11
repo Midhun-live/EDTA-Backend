@@ -182,6 +182,7 @@ async def create_assessment(
             "age": payload.age,
             "contact_number": payload.contact_number,
             "discharge_date": payload.discharge_date.isoformat(),
+            "remarks": payload.remarks
         },
         input_data=jsonable_encoder(payload),
         output_data=jsonable_encoder(output),
