@@ -6,6 +6,9 @@ from app.api.assessment import router as assessment_router, share_router
 from app.api.auth import router as auth_router
 from fastapi.middleware.cors import CORSMiddleware
 
+import os
+print("MAIL_USERNAME =", os.getenv("MAIL_USERNAME"))
+
 
 app = FastAPI(
     title="EDTA Backend",

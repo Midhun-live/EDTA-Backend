@@ -37,7 +37,6 @@ import traceback
 def send_assessment_email_sync(assessment: AssessmentRecord):
     try:
         print("EMAIL: starting send process")
-        print("MAIL_USERNAME loaded:", os.getenv("MAIL_USERNAME") is not None)
         
         pdf_bytes = generate_assessment_pdf(assessment, assessment.user, include_metadata=True)
         print("PDF generated successfully")
@@ -45,9 +44,8 @@ def send_assessment_email_sync(assessment: AssessmentRecord):
         msg = EmailMessage()
         msg['Subject'] = "EDTA Assessment Report"
         msg['From'] = os.getenv("MAIL_FROM")
-        # For testing, user requested to use MAIL_USERNAME as recipient
         msg['To'] = os.getenv("MAIL_USERNAME")
-        msg.set_content("Assessment report attached.")
+        msg.set_content("Please find the attached assessment report.")
 
         msg.add_attachment(
             pdf_bytes,
@@ -56,18 +54,17 @@ def send_assessment_email_sync(assessment: AssessmentRecord):
             filename="assessment_report.pdf"
         )
 
-        mail_server = os.getenv("MAIL_SERVER", "smtp.gmail.com")
-        mail_port = int(os.getenv("MAIL_PORT", 587))
-        mail_username = os.getenv("MAIL_USERNAME")
-        mail_password = os.getenv("MAIL_PASSWORD")
-
-        print("EMAIL: connecting to SMTP")
-        with smtplib.SMTP(mail_server, mail_port) as server:
+        print("Connecting to SMTP server...")
+        with smtplib.SMTP(os.getenv("MAIL_SERVER"), int(os.getenv("MAIL_PORT", 587))) as server:
             server.starttls()
-            server.login(mail_username, mail_password)
+            server.login(
+                os.getenv("MAIL_USERNAME"),
+                os.getenv("MAIL_PASSWORD")
+            )
+            print("Sending email...")
             server.send_message(msg)
         
-        print("EMAIL: email sent successfully")
+        print("Email sent successfully")
     except Exception as e:
         print("EMAIL ERROR:", e)
         traceback.print_exc()
@@ -105,18 +102,15 @@ async def test_email(background_tasks: BackgroundTasks):
                 filename="test_report.pdf"
             )
 
-            mail_server = os.getenv("MAIL_SERVER", "")
-            mail_port = int(os.getenv("MAIL_PORT", 587))
-            mail_username = os.getenv("MAIL_USERNAME", "")
-            mail_password = os.getenv("MAIL_PASSWORD", "")
-
-            server = smtplib.SMTP(mail_server, mail_port)
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(mail_username, mail_password)
-            server.send_message(msg)
-            server.quit()
+            print("Connecting to SMTP server...")
+            with smtplib.SMTP(os.getenv("MAIL_SERVER"), int(os.getenv("MAIL_PORT", 587))) as server:
+                server.starttls()
+                server.login(
+                    os.getenv("MAIL_USERNAME"),
+                    os.getenv("MAIL_PASSWORD")
+                )
+                print("Sending email...")
+                server.send_message(msg)
             print("Test email sent successfully")
         except Exception as e:
             print(f"Test email failed: {e}")
