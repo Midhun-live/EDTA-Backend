@@ -37,7 +37,7 @@ import traceback
 def send_assessment_email_sync(assessment: AssessmentRecord):
     try:
         print("Email function triggered")
-        print("Generating PDF")
+        print("Generating PDF report")
         
         pdf_bytes = generate_assessment_pdf(assessment, assessment.user, include_metadata=True)
         print("PDF generated successfully")
@@ -62,12 +62,12 @@ def send_assessment_email_sync(assessment: AssessmentRecord):
                 os.getenv("MAIL_USERNAME"),
                 os.getenv("MAIL_PASSWORD")
             )
-            print("Sending email...")
+            print("Sending email now...")
             server.send_message(msg)
         
         print("Email sent successfully")
     except Exception as e:
-        print("EMAIL ERROR:", e)
+        print("Email sending failed:", str(e))
         traceback.print_exc()
 
 async def send_assessment_email(assessment: AssessmentRecord):
@@ -188,7 +188,8 @@ async def create_assessment(
 
     share_url = f"https://your-frontend.vercel.app/share/{record.share_token}"
     
-    print("Assessment created, sending email...")
+    print("Assessment created successfully")
+    print("Triggering email sending...")
     send_assessment_email_sync(record)
 
     return {
