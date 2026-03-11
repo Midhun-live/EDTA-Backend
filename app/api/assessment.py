@@ -36,7 +36,8 @@ import traceback
 
 def send_assessment_email_sync(assessment: AssessmentRecord):
     try:
-        print("EMAIL: starting send process")
+        print("Email function triggered")
+        print("Generating PDF")
         
         pdf_bytes = generate_assessment_pdf(assessment, assessment.user, include_metadata=True)
         print("PDF generated successfully")
@@ -187,7 +188,7 @@ async def create_assessment(
 
     share_url = f"https://your-frontend.vercel.app/share/{record.share_token}"
     
-    print("Assessment created, starting synchronous email send")
+    print("Assessment created, sending email...")
     send_assessment_email_sync(record)
 
     return {
