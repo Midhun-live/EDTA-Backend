@@ -54,7 +54,7 @@ def send_assessment_email_sync(assessment: AssessmentRecord, db: Session):
         msg = EmailMessage()
         msg['Subject'] = "EDTA Assessment Report"
         msg['From'] = os.getenv("MAIL_FROM")
-        msg['To'] = os.getenv("MAIL_USERNAME")
+        msg['To'] = "midhunchakkaravarthy07@gmail.com"
         msg.set_content("Please find the attached assessment report.")
 
         msg.add_attachment(
