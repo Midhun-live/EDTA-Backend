@@ -119,6 +119,42 @@ async def test_email(background_tasks: BackgroundTasks):
     background_tasks.add_task(run_test)
     return {"status": "email attempt triggered"}
 
+@router.get("/debug-email")
+def debug_email():
+    import smtplib
+    from email.message import EmailMessage
+    import os
+
+    print("MAIL_USERNAME:", os.getenv("MAIL_USERNAME"))
+    print("MAIL_SERVER:", os.getenv("MAIL_SERVER"))
+    print("MAIL_PORT:", os.getenv("MAIL_PORT"))
+
+    msg = EmailMessage()
+    msg["Subject"] = "SMTP Test Email"
+    msg["From"] = os.getenv("MAIL_FROM")
+    msg["To"] = os.getenv("MAIL_USERNAME")
+    msg.set_content("This is a test email from the EDTA backend.")
+
+    try:
+        print("Connecting to SMTP server...")
+        server = smtplib.SMTP(os.getenv("MAIL_SERVER"), int(os.getenv("MAIL_PORT")))
+        server.starttls()
+        
+        print("Logging in...")
+        server.login(
+            os.getenv("MAIL_USERNAME"),
+            os.getenv("MAIL_PASSWORD")
+        )
+        
+        print("Sending email...")
+        server.send_message(msg)
+        server.quit()
+        
+        return {"status": "Email sent successfully"}
+    except Exception as e:
+        print("SMTP ERROR:", str(e))
+        return {"error": str(e)}
+
 @router.post("")
 async def create_assessment(
     background_tasks: BackgroundTasks,
